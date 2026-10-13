@@ -58,6 +58,33 @@ Android supports managing multiple Bluetooth connections, but its ordinary RFCOM
 
 For Nearby Connections, use a host-and-clients star rather than a full mesh. Internet connectivity is unnecessary, but the relevant radios and permissions still need to be available. Whether requiring Google Play services is acceptable is an open decision.
 
+### Bluetooth-only issues and combined-transport benefits
+
+The combined option discussed here means **Google Nearby Connections**, not a second custom networking implementation. It manages nearby communication using Bluetooth, BLE, and Wi-Fi. Both options can work without internet access or a router.
+
+| Concern | Bluetooth-only | Nearby Connections using Bluetooth and Wi-Fi |
+| --- | --- | --- |
+| Group connections | We manage separate client connections and channel/service handling; practical capacity needs testing across phones | Provides a star topology with one host and multiple clients; actual supported group size still needs testing |
+| Live drawing | Compact stroke messages should be manageable, but the host relays updates to each guesser and traffic grows with the group | Wi-Fi provides more bandwidth and headroom for live updates and drawing synchronization |
+| Joining | We implement discovery, pairing, connection requests, timeouts, and errors | Handles much of discovery and connection setup; the app still needs a lobby, permissions, and connection confirmation |
+| Development effort | More custom networking code and device-specific debugging | Less low-level connection work, leaving more development time for game behavior |
+| App size | Avoids an additional networking SDK | Adds a dependency; measure its effect on release download size rather than estimating it |
+| Compatibility | Can support phones without Google Play services and does not need Wi-Fi enabled | The proposed Android SDK requires Google Play services and availability of the necessary radios |
+| Disconnects | We implement reconnection and game-state recovery | Provides connection events and transfer handling; reconnect policy and restoring the round remain app responsibilities |
+
+Specific Bluetooth-only work to account for:
+
+- **Multiple clients:** the ordinary two-phone sample is not a complete party implementation. Track each connection, handle channel/service allocation, and communicate with every player separately.
+- **Discovery during play:** Android documents that Bluetooth discovery slows connections. Joining during a round must account for discovery potentially affecting existing communication.
+- **Drawing synchronization:** send ordered drawing actions, including undo and clear, and restore a complete drawing after reconnecting. These game-level requirements also apply to Nearby.
+- **Real-phone validation:** working on two devices does not establish reliability for four or six. Test different manufacturers and Android versions before advertising a limit.
+
+Bluetooth-only remains a reasonable option for a small group using compact sketches. Its benefits include fewer dependencies, no Wi-Fi requirement, and support for phones without Google Play services. Drawing bandwidth alone is not a reason to reject it.
+
+The combined option's main benefit is reducing custom connection handling while adding bandwidth headroom. It does not solve game rules, timers, private guesses, scoring, or host departure. It also does not guarantee a player limit or better battery life. Google documents SDK usage diagnostics controlled by the device's Usage & diagnostics setting.
+
+**Recommendation, not an agreed decision:** use Nearby Connections if ease of development and group play are the priorities, initially validating four players total. Prefer exploring Bluetooth-only if avoiding Google Play services or keeping Wi-Fi disabled is a firm requirement. The transport choice remains open.
+
 Before choosing a transport, run a small connection experiment on physical phones. Check joining, all phones taking the drawing role, live drawing latency, and connection loss. Emulator testing alone cannot establish reliability.
 
 ## Keeping the app lightweight
